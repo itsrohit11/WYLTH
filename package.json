@@ -1,0 +1,77 @@
+{
+  "name": "wylth",
+  "version": "1.0.0",
+  "description": "WYLTH - Offline Personal Finance Desktop App",
+  "author": "Rohit Jain",
+  "private": true,
+  "main": "electron/main.js",
+  "scripts": {
+    "postinstall": "node scripts/setup-native.js",
+    "rebuild-native": "node scripts/setup-native.js",
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build",
+    "test": "node test/money.test.js",
+    "dist": "npm run build && electron-builder --win",
+    "dist:portable": "npm run build && electron-builder --win portable"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "date-fns": "^3.0.6",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.20.0",
+    "recharts": "^2.10.1",
+    "zustand": "^4.4.7",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.1.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "electron": "37.10.3",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.rohit.financedesktop",
+    "productName": "WYLTH",
+    "copyright": "Rohit Jain",
+    "npmRebuild": false,
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**",
+      "**/*.node"
+    ],
+    "directories": { "output": "release" },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "electron/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WYLTH",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "extraMetadata": { "main": "electron/main.js" }
+  }
+}

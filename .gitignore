@@ -1,0 +1,20 @@
+# dependencies and build output
+node_modules/
+dist/
+release/
+
+# your own data must never be committed
+*.db
+*.db-wal
+*.db-shm
+*.db.gz
+*.xlsx
+*.csv
+backups/
+.env
+.env.*
+
+# logs and OS junk
+*.log
+.DS_Store
+Thumbs.db

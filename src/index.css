@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Typeface is bundled with the app, so the design looks the same offline. */
+@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('./assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Sora'; font-style: normal; font-weight: 100 800; font-display: swap; src: url('./assets/fonts/sora-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Unbounded'; font-style: normal; font-weight: 200 900; font-display: swap; src: url('./assets/fonts/unbounded-latin-wght-normal.woff2') format('woff2'); }
+
+/* ============ Design tokens: "Obsidian Emerald" ============
+   Dark-first. Obsidian green canvas, deep emerald surfaces, electric lime for actions and the active item,
+   champagne gold for restrained premium accents, growth green for gains, warm ivory for text.
+   Values are space-separated RGB so Tailwind can add opacity. Light mode is the same palette inverted
+   onto warm ivory paper. */
+:root {
+  --color-bg: #F1F4FB;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #E6ECF8;
+  --color-primary: #5B8CFF;
+  --color-gold: #B8924A;
+  --color-success: #2E8F68;
+  --color-text-primary: #0A1228;
+  --color-text-secondary: #54628A;
+  --color-border: #D5DDEE;
+  --color-warning: #D98206;
+  --color-error: #DC2626;
+
+  --app: 241 244 251;
+  --surface: 255 255 255;
+  --surface-2: 230 236 248;
+  --content: 10 18 40;
+  --muted: 84 98 130;
+  --faint: 134 146 176;
+  --line: 213 221 238;
+  --scroll: 200 209 230;
+  --glow: 63 111 230;
+  --sig: linear-gradient(135deg, #5B8CFF 0%, #7C6BFF 55%, #22D3EE 120%);
+}
+.dark {
+  --color-bg: #060B18;
+  --color-surface: #0E1730;
+  --color-surface-elevated: #18284F;
+  --color-gold: #D6B875;
+  --color-success: #45B58A;
+  --color-text-primary: #EEF2FB;
+  --color-text-secondary: #9AA8C7;
+  --color-border: #223566;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+
+  --app: 6 11 24;              /* #060B18 obsidian green */
+  --surface: 14 23 48;         /* #0E1730 deep emerald */
+  --surface-2: 24 40 79;       /* #18284F elevated emerald */
+  --content: 238 242 251;      /* #EEF2FB warm ivory */
+  --muted: 154 168 199;        /* #9AA8C7 muted sage */
+  --faint: 106 122 158;
+  --line: 34 53 102;            /* #223566 border green */
+  --scroll: 34 53 102;
+  --glow: 91 140 255;          /* #5B8CFF electric lime */
+}
+
+* { box-sizing: border-box; }
+@layer base { *, ::before, ::after { border-color: rgb(var(--line)); } }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+::selection { background: rgb(91 140 255 / 0.40); color: #FFFFFF; }
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  margin: 0;
+  color: rgb(var(--content));
+  background-color: rgb(var(--app));
+  background-image: radial-gradient(900px circle at 100% -10%, rgb(124 107 255 / 0.10), transparent 55%), radial-gradient(800px circle at -10% 110%, rgb(34 211 238 / 0.06), transparent 55%);
+  background-attachment: fixed;
+}
+#root { position: relative; z-index: 1; }
+
+h1, h2, h3 { font-family: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: -0.02em; }
+h2.text-xl.font-bold {
+  font-size: 1.8rem; line-height: 2.1rem; font-weight: 700; letter-spacing: -0.04em; width: fit-content;
+  background: linear-gradient(100deg, rgb(var(--content)) 0%, rgb(var(--content)) 45%, #7EA4FF 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+:root:not(.dark) h2.text-xl.font-bold { background-image: linear-gradient(100deg, #0A1228 0%, #0A1228 40%, #3F6FE6 100%); }
+
+/* Financial values: steady digit widths. */
+.tabular { font-variant-numeric: tabular-nums; }
+.tabular.font-bold, .tabular.font-semibold, .tabular.font-medium { font-family: 'Sora', 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.04em; font-weight: 650; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--scroll)); border-radius: 9999px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--faint)); background-clip: content-box; }
+
+.fade-in { animation: fadeIn .22s ease-out; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* Visible keyboard focus everywhere. */
+:focus-visible { outline: 2px solid #7EA4FF; outline-offset: 2px; }
+:root:not(.dark) :focus-visible { outline-color: #060B18; }
+
+/* ============ Surfaces ============ */
+.card-surface {
+  position: relative; overflow: hidden;
+  background: rgb(var(--surface));
+  border: 1px solid rgb(var(--line));
+  border-radius: 18px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.card-surface:hover { border-color: rgb(var(--glow) / 0.35); }
+
+.sig-fill { background: var(--sig); color: #FFFFFF; }
+/* Gradient wordmark + accents */
+.sig-text { background: linear-gradient(110deg, #7EA4FF 0%, #A78BFA 50%, #22D3EE 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.font-logo { font-family: 'Unbounded', 'Sora', sans-serif; letter-spacing: 0.04em; font-weight: 700; }
+/* The WYLTH wordmark is always gold: champagne into deep gold, like foil on a wealth-manager's letterhead. */
+.logo-grad { background: linear-gradient(100deg, #F6E7BE 0%, #D6B875 48%, #B8924A 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+:root:not(.dark) .logo-grad { background-image: linear-gradient(100deg, #9A7530 0%, #B8924A 50%, #8A6A2B 100%); }
+.grad-num { background: linear-gradient(100deg, #FFFFFF 5%, #B9CCFF 55%, #E6CF9F 110%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* The net-worth hero: deep emerald with a thin champagne-gold line, ivory type in both themes. */
+.ledger-margin::before, .ledger-margin::after { content: none; }
+.hero-edge {
+  background-image: radial-gradient(700px circle at 100% 0%, rgb(124 107 255 / 0.28), transparent 60%), radial-gradient(600px circle at 0% 120%, rgb(34 211 238 / 0.14), transparent 60%), linear-gradient(135deg, #1B2D5E 0%, #0E1730 70%) !important;
+  border-color: #223566 !important;
+  color: #EEF2FB;
+}
+.hero-edge::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, #D6B875, rgb(214 184 117 / 0)); z-index: 1; }
+.hero-edge > div.absolute { display: none; }
+.hero-edge .text-content { color: #EEF2FB !important; }
+.hero-edge .text-muted { color: #9AA8C7 !important; }
+.hero-edge .text-faint { color: #8190B0 !important; }
+
+/* ============ Tinted status colours ============ */
+.dark .bg-brand-50, .dark .bg-brand-50\/50, .dark .bg-violet-50 { background-color: rgb(91 140 255 / 0.10) !important; }
+.dark .bg-brand-100, .dark .bg-violet-100 { background-color: rgb(91 140 255 / 0.18) !important; }
+.dark .bg-green-50, .dark .bg-green-50\/60, .dark .bg-green-50\/30, .dark .bg-emerald-50 { background-color: rgb(69 181 138 / 0.14) !important; }
+.dark .bg-green-100, .dark .bg-green-200 { background-color: rgb(69 181 138 / 0.22) !important; }
+.dark .bg-red-50, .dark .bg-red-50\/20, .dark .bg-red-50\/60 { background-color: rgb(239 68 68 / 0.14) !important; }
+.dark .bg-red-100, .dark .bg-rose-100 { background-color: rgb(239 68 68 / 0.22) !important; }
+.dark .bg-amber-50, .dark .bg-yellow-50, .dark .bg-amber-50\/60 { background-color: rgb(245 158 11 / 0.14) !important; }
+.dark .bg-amber-100, .dark .bg-yellow-100 { background-color: rgb(245 158 11 / 0.22) !important; }
+.dark .bg-sky-100 { background-color: rgb(214 184 117 / 0.20) !important; }
+.dark .bg-slate-100 { background-color: rgb(var(--surface-2)) !important; }
+
+.dark .border-green-200, .dark .border-green-300, .dark .border-green-400 { border-color: rgb(69 181 138 / 0.40) !important; }
+.dark .border-red-200, .dark .border-red-100, .dark .border-red-300 { border-color: rgb(239 68 68 / 0.45) !important; }
+.dark .border-yellow-200, .dark .border-amber-200, .dark .border-amber-300 { border-color: rgb(245 158 11 / 0.40) !important; }
+
+.dark .text-green-600, .dark .text-green-700, .dark .text-green-800, .dark .text-emerald-600, .dark .text-emerald-700, .dark .text-emerald-800 { color: #45B58A !important; }
+.dark .text-red-600, .dark .text-red-700, .dark .text-red-800, .dark .text-rose-800 { color: #F87171 !important; }
+.dark .text-yellow-700, .dark .text-yellow-800, .dark .text-amber-700, .dark .text-amber-800, .dark .text-amber-900, .dark .text-amber-600 { color: #F59E0B !important; }
+.dark .text-orange-600 { color: #F59E0B !important; }
+.dark .text-brand-700, .dark .text-brand-900, .dark .text-violet-700, .dark .text-violet-800, .dark .text-brand-600, .dark .text-brand-500 { color: #7EA4FF !important; }
+.dark .text-sky-800 { color: #D6B875 !important; }
+.dark .text-slate-700 { color: rgb(var(--muted)) !important; }
+.dark input, .dark select, .dark textarea { color-scheme: dark; }
+
+/* Light theme: readable text colours on ivory. */
+:root:not(.dark) .text-green-600, :root:not(.dark) .text-emerald-600 { color: #2E8F68 !important; }
+:root:not(.dark) .text-green-700, :root:not(.dark) .text-emerald-700 { color: #257A57 !important; }
+:root:not(.dark) .text-brand-500, :root:not(.dark) .text-brand-600, :root:not(.dark) .text-brand-700 { color: #2650C9 !important; }
+:root:not(.dark) .bg-brand-50 { background-color: #E4ECFF !important; }
+:root:not(.dark) .bg-green-50, :root:not(.dark) .bg-emerald-50 { background-color: #E1F3EA !important; }
+
+.rail-scroll { scrollbar-width: none; }
+.rail-scroll::-webkit-scrollbar { width: 0; height: 0; }

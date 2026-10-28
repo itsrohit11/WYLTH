@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WYLTH</title>
+    <script>
+      // Apply saved theme before paint to avoid a flash.
+      // Dark is the default look; 'theme-v2' is a fresh preference so the new design shows first.
+      try { if (localStorage.getItem('theme-v2') !== 'light') document.documentElement.classList.add('dark'); } catch (e) { document.documentElement.classList.add('dark'); }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

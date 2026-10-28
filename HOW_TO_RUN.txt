@@ -1,0 +1,63 @@
+=========================================
+ WYLTH - ROHIT JAIN
+ Offline Desktop App (Electron + SQLite)
+=========================================
+
+REQUIREMENTS
+------------
+- Node.js LTS (download from https://nodejs.org) - that's the ONLY thing you
+  need to install. No Python, no Visual Studio, no Java, no server.
+- Tested with Node.js v24. Any current LTS works.
+
+HOW TO START (FIRST TIME)
+--------------------------
+1. Open this folder in File Explorer.
+2. Double-click: start.bat
+   - On the first run it installs dependencies automatically (a few minutes).
+     This also downloads the correct SQLite database engine for the app -
+     no build tools are required.
+   - Then the WYLTH window opens.
+
+HOW TO START (AFTER FIRST TIME)
+---------------------------------
+Same: double-click start.bat (it starts instantly, no re-install).
+
+HOW TO BUILD A STANDALONE .EXE
+--------------------------------
+1. Double-click: build.bat
+2. Wait a few minutes. The "release" folder opens when it's done.
+3. You get TWO files in the release folder:
+   - Installer: "WYLTH Setup <version>.exe"  (installs the app)
+   - Portable:  "WYLTH <version>.exe"        (run without installing)
+
+DATA STORAGE
+------------
+All your data is stored locally in a single SQLite database file.
+Easiest way to find it: in the app menu, click  File > Open Data Folder.
+The file is named  finance.db  and typically lives at:
+  C:\Users\<YourName>\AppData\Roaming\WYLTH\finance.db
+(When running via start.bat in dev mode it is under ...\Roaming\wylth\.)
+
+To back up your data, just copy finance.db somewhere safe. You can also use
+the Export page to save everything to an Excel file.
+
+TROUBLESHOOTING
+---------------
+- "Node.js is not installed": install it from https://nodejs.org, then re-run.
+- App opens but shows a database error: delete the "node_modules" folder and
+  run start.bat again (this re-downloads the database engine for Electron).
+
+FEATURES
+--------
+- Dashboard with live charts
+- Salary allocations (50-30-20 rule)
+- Expense tracking (Needs & Wants)
+- Savings goals with transactions
+- Investment portfolio tracker
+- Emergency fund tracker
+- Analytics with yearly charts
+- Export to Excel
+- 100% offline - no internet needed
+- Data never leaves your computer
+
+=========================================
