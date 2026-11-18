@@ -10,9 +10,9 @@ import { UpdatedAt } from '../components/ui/UpdatedAt'
 import { useDnd } from '../lib/useDnd'
 import { Plus, Pencil, Trash2, Landmark, GripVertical, ArrowDownLeft, ArrowUpRight, ScrollText } from 'lucide-react'
 
-const PURPOSES = ['SAVINGS', 'EXPENSE', 'INVESTMENT', 'EMERGENCY', 'OTHER']
-const purposeLabel = { SAVINGS: 'Savings', EXPENSE: 'Expense', INVESTMENT: 'Investment', EMERGENCY: 'Emergency', OTHER: 'Other' }
-const purposeColor = { SAVINGS: 'text-green-600', EXPENSE: 'text-orange-600', INVESTMENT: 'text-brand-600', EMERGENCY: 'text-red-600', OTHER: 'text-muted' }
+const PURPOSES = ['SAVINGS', 'EXPENSE', 'INVESTMENT', 'EMERGENCY', 'GOALS', 'OTHER']
+const purposeLabel = { SAVINGS: 'Savings', EXPENSE: 'Expense', INVESTMENT: 'Investment', EMERGENCY: 'Emergency', GOALS: 'Goals', OTHER: 'Other' }
+const purposeColor = { SAVINGS: 'text-green-600', EXPENSE: 'text-orange-600', INVESTMENT: 'text-brand-600', EMERGENCY: 'text-red-600', GOALS: 'text-purple-600', OTHER: 'text-muted' }
 const mask = (n) => n ? '•••• ' + String(n).slice(-4) : ''
 
 function BankForm({ initial, onSave, onClose }) {
@@ -113,13 +113,14 @@ export default function Bank() {
         <Button onClick={()=>setModal({open:true,item:null})}><Plus size={16}/> Add Account</Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         {[
           {label:'Total Balance', value:total, cls:'text-content'},
           {label:'Savings', value:byPurpose('SAVINGS'), cls:'text-green-600'},
           {label:'Expense', value:byPurpose('EXPENSE'), cls:'text-orange-600'},
           {label:'Investment', value:byPurpose('INVESTMENT'), cls:'text-brand-600'},
           {label:'Emergency', value:byPurpose('EMERGENCY'), cls:'text-red-600'},
+          {label:'Goals', value:byPurpose('GOALS'), cls:'text-purple-600'},
         ].map(c=>(
           <Card key={c.label}><CardContent className="py-4 text-center">
             <p className={`text-xl font-bold ${c.cls}`}>{formatCurrency(c.value)}</p>

@@ -27,13 +27,14 @@ export default function Dashboard() {
   useEffect(() => {
     Promise.all([
       window.api.bank.getAll(), window.api.bill.getAll(), window.api.loan.getAll(),
-      window.api.saving.getBalance(), window.api.card.totals(),
-    ]).then(([banks, bills, loans, sav, cards]) => {
+      window.api.saving.getBalance(), window.api.card.totals(), window.api.cash.get(),
+    ]).then(([banks, bills, loans, sav, cards, cash]) => {
       const sum = (arr, k) => arr.reduce((s, x) => s + Number(x[k] || 0), 0)
       // Category totals are just the tally of the bank accounts assigned to each purpose.
       const byPurpose = (p) => banks.filter(b => b.purpose === p).reduce((s, b) => s + Number(b.balance || 0), 0)
       setOv({
         bank: sum(banks, 'balance'),
+        cash: Number(cash?.balance || 0),
         bankSavings: byPurpose('SAVINGS'),
         bankEmergency: byPurpose('EMERGENCY'),
         bankInvestment: byPurpose('INVESTMENT'),
@@ -80,7 +81,9 @@ export default function Dashboard() {
       {/* Net worth + overview across sections */}
       {ov && (() => {
         // Emergency & Savings are categories WITHIN the bank total, so they're not added again.
-        const netWorth = ov.bank + Number(data.totalCurrentValue||0) + ov.toReceive - ov.toRepay - Number(ov.cardOut||0)
+        // Cash in hand sits alongside the bank total as one "Cash & bank" figure.
+        const cashAndBank = ov.bank + ov.cash
+        const netWorth = cashAndBank + Number(data.totalCurrentValue||0) + ov.toReceive - ov.toRepay - Number(ov.cardOut||0)
         return (
           <>
             <Card className="ledger-margin hero-edge relative shadow-lift">
@@ -89,14 +92,12 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-medium text-muted">Net worth today</p>
                   <p className="font-display text-[56px] leading-none font-semibold grad-num tabular mt-2 tracking-[-0.04em]">{formatCurrency(netWorth)}</p>
-                  <p className="text-xs text-faint mt-3">Bank + investments + money owed to you, minus debts and card dues</p>
+                  <p className="text-xs text-faint mt-3">Cash and bank (savings and emergency fund included) + investments + money owed to you, minus debts and card dues</p>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-3">
+                <div className="grid grid-cols-2 gap-x-10 gap-y-3">
                   {[
-                    {l:'In banks', v:ov.bank, c:'#D6B875'},
+                    {l:'Cash & bank', v:cashAndBank, c:'#D6B875'},
                     {l:'Invested', v:data.totalCurrentValue, c:'#5B8CFF'},
-                    {l:'Emergency', v:ov.bankEmergency, c:'#F59E0B'},
-                    {l:'Savings', v:ov.bankSavings, c:'#45B58A'},
                   ].map(x=>(
                     <div key={x.l}>
                       <p className="flex items-center gap-1.5 text-xs text-muted"><span className="w-1.5 h-1.5 rounded-full" style={{background:x.c, boxShadow:`0 0 8px ${x.c}`}}/>{x.l}</p>

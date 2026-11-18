@@ -10,19 +10,20 @@ import { ArrowDownLeft, ArrowUpRight, Download, ScrollText } from 'lucide-react'
 const SOURCE = {
   MANUAL: ['Manual', 'default'], OPENING: ['Opening', 'info'], ADJUSTMENT: ['Adjustment', 'warning'],
   EXPENSE: ['Expense', 'danger'], CARD: ['Card bill', 'warning'], SAVINGS: ['Savings', 'success'], DEMAT: ['Demat', 'purple'],
-  LOAN: ['Loan', 'warning'], SIP: ['SIP', 'info'], INVESTMENT_SALE: ['Investment sale', 'success'],
+  TRANSFER: ['Bank ⇄ cash', 'info'], LOAN: ['Loan', 'warning'], SIP: ['SIP', 'info'], INVESTMENT_SALE: ['Investment sale', 'success'],
 }
 const ymLabel = (ym) => { const [y, m] = ym.split('-'); return `${MONTHS[Number(m) - 1]} ${y}` }
 const csvCell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
 
-// Full statement for one bank account: every entry and exit, with the balance after each.
-export default function StatementModal({ account, onClose }) {
+// Full statement for one bank account (or the cash wallet, via `load`): every entry and exit,
+// with the balance after each.
+export default function StatementModal({ account, onClose, load, footnote }) {
   const [ym, setYm] = useState('')
   const [data, setData] = useState(null)
 
   useEffect(() => {
     let live = true
-    window.api.bank.statement(account.id, ym || undefined).then(d => { if (live) setData(d) }).catch(() => live && setData({ rows: [], months: [] }))
+    ;(load ? load(ym || undefined) : window.api.bank.statement(account.id, ym || undefined)).then(d => { if (live) setData(d) }).catch(() => live && setData({ rows: [], months: [] }))
     return () => { live = false }
   }, [account.id, ym])
 
@@ -109,7 +110,7 @@ export default function StatementModal({ account, onClose }) {
             </div>
           </div>
         )}
-        <p className="text-[11px] text-faint">Every deposit, withdrawal, expense, savings move, demat transfer, loan settlement and investment sale on this account is listed here, newest first.</p>
+        <p className="text-[11px] text-faint">{footnote || 'Every deposit, withdrawal, expense, savings move, demat transfer, loan settlement and investment sale on this account is listed here, newest first.'}</p>
       </div>
     </Modal>
   )

@@ -29,7 +29,7 @@ const titles = {
   '/bills':             'Bills',
   '/loans':             'Lending & Debts',
   '/analytics':         'Analytics',
-  '/export':            'Export & Backup',
+  '/export':            'Export to Excel',
   '/notes':             'Notes',
 }
 

@@ -9,6 +9,12 @@
 //   Health & education cess of 4% is added on top of the tax. Surcharge is not modelled.
 //   Brokerage and other transfer expenses reduce the gain; STT does NOT (but it does reduce
 //   the cash you receive).
+//   Other assets (planning estimates):
+//     - Crypto / virtual digital assets: flat 30% on the gain, no set-off of losses, no holding-period split.
+//     - Gold / silver / other metals and real estate: held 24 months or less -> taxed at your slab rate;
+//       held MORE than 24 months -> 12.5% long-term rate (no indexation, no Rs 1.25L exemption).
+//     - FD, bonds and other holdings: the gain (interest) is taxed at your slab rate.
+//     - PPF / NPS: treated as tax-free.
 //   Set-off within the year: short-term losses can absorb short-term gains and long-term gains;
 //   long-term losses can only absorb long-term gains.
 //
@@ -20,6 +26,9 @@ const RULES = {
   LTCG_EXEMPTION: 125000,
   CESS: 0.04,
   EQUITY_LT_MONTHS: 12,
+  OTHER_LT_MONTHS: 24,          // metals, real estate
+  CRYPTO_RATE: 0.30,
+  LTCG_OTHER_RATE: 0.125,
   // Default STT on the SELL side: delivery equity shares 0.1%, equity fund redemption 0.001%.
   STT_STOCK: 0.001,
   STT_EQUITY_FUND: 0.00001,
@@ -156,17 +165,25 @@ function saleGains({ chunks, price, brokerage = 0, stt = 0, sellDate, ltMonths =
 }
 
 // ---- tax for a whole financial year ---------------------------------------------------------
-// sales: [{ category:'EQUITY'|'DEBT', st_gain, lt_gain, slab_rate }]
+// sales: [{ category:'EQUITY'|'DEBT'|'LT24'|'CRYPTO'|'EXEMPT', st_gain, lt_gain, slab_rate }]
 function fyTax(sales) {
-  let stEq = 0, ltEq = 0
+  let stEq = 0, ltEq = 0, lt24 = 0, crypto = 0
   const slab = {}  // rate% -> net gain
   for (const s of sales || []) {
-    if (s.category === 'DEBT') {
+    const st = Number(s.st_gain) || 0, lt = Number(s.lt_gain) || 0
+    if (s.category === 'EXEMPT') continue
+    if (s.category === 'CRYPTO') { crypto += Math.max(st + lt, 0); continue }   // no set-off of crypto losses
+    if (s.category === 'DEBT' || s.category === 'LT24') {
       const r = Number(s.slab_rate) || 0
-      slab[r] = (slab[r] || 0) + (Number(s.st_gain) || 0) + (Number(s.lt_gain) || 0)
+      if (s.category === 'LT24') {
+        slab[r] = (slab[r] || 0) + st      // held <= 24 months: slab rate
+        lt24 += lt                         // held > 24 months: 12.5%
+      } else {
+        slab[r] = (slab[r] || 0) + st + lt
+      }
     } else {
-      stEq += Number(s.st_gain) || 0
-      ltEq += Number(s.lt_gain) || 0
+      stEq += st
+      ltEq += lt
     }
   }
   // Positive short-term-type buckets, highest rate first (losses absorb the costliest gains).
@@ -176,26 +193,29 @@ function fyTax(sales) {
   else stLoss += -stEq
   for (const r of Object.keys(slab)) {
     const g = slab[r]
-    if (g >= 0) buckets.push({ label: `Debt fund gains @ slab ${r}%`, rate: Number(r) / 100, amount: g })
+    if (g >= 0) buckets.push({ label: `Gains taxed at slab ${r}%`, rate: Number(r) / 100, amount: g })
     else stLoss += -g
   }
   buckets.sort((a, b) => b.rate - a.rate)
   let ltPos = Math.max(ltEq, 0)
   let ltLoss = Math.max(-ltEq, 0)
-  const stLossTotal = stLoss, ltLossTotal = ltLoss
+  let lt24Pos = Math.max(lt24, 0)
+  const stLossTotal = stLoss, ltLossTotal = ltLoss + Math.max(-lt24, 0)
 
   for (const b of buckets) { const use = Math.min(b.amount, stLoss); b.amount -= use; stLoss -= use }
-  { const use = Math.min(ltPos, stLoss); ltPos -= use; stLoss -= use }   // ST loss -> LT gain
-  { const use = Math.min(ltPos, ltLoss); ltPos -= use; ltLoss -= use }   // LT loss -> LT gain only
+  { const use = Math.min(ltPos, stLoss); ltPos -= use; stLoss -= use }     // ST loss -> LT gain
+  { const use = Math.min(lt24Pos, stLoss); lt24Pos -= use; stLoss -= use } // ST loss -> other LT gain
+  { const use = Math.min(ltPos, ltLoss); ltPos -= use; ltLoss -= use }     // LT loss -> LT gain only
 
   const exemption = Math.min(ltPos, RULES.LTCG_EXEMPTION)
   const taxableLT = ltPos - exemption
-  let tax = taxableLT * RULES.LTCG_EQUITY_RATE
+  let tax = taxableLT * RULES.LTCG_EQUITY_RATE + lt24Pos * RULES.LTCG_OTHER_RATE + crypto * RULES.CRYPTO_RATE
   for (const b of buckets) tax += b.amount * b.rate
   const cess = tax * RULES.CESS
   return {
     stcgEquity: round2(stEq), ltcgEquity: round2(ltEq),
     debtGains: round2(Object.values(slab).reduce((s, v) => s + v, 0)),
+    ltcgOther: round2(lt24), cryptoGains: round2(crypto),
     stLosses: round2(stLossTotal), ltLosses: round2(ltLossTotal),
     exemptionUsed: round2(exemption), exemptionLeft: round2(RULES.LTCG_EXEMPTION - exemption),
     taxableLT: round2(taxableLT),
@@ -213,6 +233,7 @@ function marginalTax(previousSales, thisSale) {
 }
 
 function defaultStt(kind, category, gross) {
+  if (kind !== 'STOCKS' && kind !== 'SIP') return 0   // STT only applies to listed shares and equity funds
   if (category === 'DEBT') return 0
   const rate = kind === 'STOCKS' ? RULES.STT_STOCK : RULES.STT_EQUITY_FUND
   return round2((Number(gross) || 0) * rate)

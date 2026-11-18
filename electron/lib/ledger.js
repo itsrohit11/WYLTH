@@ -35,6 +35,30 @@ function postBankTxn(db, accId, delta, { source = 'MANUAL', note = null, refType
   return Number(r.lastInsertRowid)
 }
 
+// ---- Cash in hand ---------------------------------------------------------------------------
+// One wallet. Its balance is the running total of cash_transactions, so the statement always
+// explains the balance.
+function cashBalance(db) {
+  const r = db.prepare("SELECT COALESCE(SUM(CASE WHEN type='CREDIT' THEN amount ELSE -amount END),0) b FROM cash_transactions").get()
+  return Math.round((Number(r.b) || 0) * 100) / 100
+}
+
+// Record a change of `delta` rupees (+ in / - out) on the cash wallet. Returns the row id or null.
+function postCashTxn(db, delta, { source = 'MANUAL', note = null, refType = null, refId = null, date = null } = {}) {
+  const amt = Math.round((Number(delta) || 0) * 100) / 100
+  if (!amt) return null
+  const after = Math.round((cashBalance(db) + amt) * 100) / 100
+  const r = db.prepare(`
+    INSERT INTO cash_transactions (type, amount, balance_after, source, ref_type, ref_id, note, date)
+    VALUES (?,?,?,?,?,?,?,?)
+  `).run(amt > 0 ? 'CREDIT' : 'DEBIT', Math.abs(amt), after, source, refType, refId ?? null, note, date || localToday())
+  try {
+    db.prepare(`INSERT INTO app_settings (key, value) VALUES ('last_change:cash', ?)
+      ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(new Date().toISOString())
+  } catch {}
+  return Number(r.lastInsertRowid)
+}
+
 // The first time statements exist, every account already has a balance with no history.
 // Give each one an opening row so the statement's running balance reconciles.
 function seedOpeningBalances(db) {
@@ -57,4 +81,4 @@ function primaryExpenseAccount(db) {
   return db.prepare("SELECT id FROM bank_accounts WHERE purpose='EXPENSE' ORDER BY COALESCE(sort_order,999999), created_at DESC LIMIT 1").get()?.id || null
 }
 
-module.exports = { postBankTxn, seedOpeningBalances, localToday, primaryExpenseAccount }
+module.exports = { postBankTxn, seedOpeningBalances, localToday, primaryExpenseAccount, cashBalance, postCashTxn }

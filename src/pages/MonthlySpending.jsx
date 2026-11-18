@@ -4,6 +4,7 @@ import { Badge } from '../components/ui/Badge'
 import { formatCurrency, MONTHS, catLabel } from '../lib/utils'
 import { CalendarDays, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
+import CategoryView from '../components/CategoryView'
 
 const parseLocal = (s) => { const [y,m,d] = String(s).split('-').map(Number); return new Date(y,(m||1)-1,d||1) }
 const fmtDay = (s) => format(parseLocal(s), 'EEE, dd MMM')
@@ -13,6 +14,7 @@ export default function MonthlySpending() {
   const [openMonth, setOpenMonth] = useState(null)  // 'YYYY-MM'
   const [monthData, setMonthData] = useState({})    // 'YYYY-MM' -> expenses[]
   const [openDate, setOpenDate] = useState(null)    // 'YYYY-MM' + date
+  const [view, setView] = useState('months')      // 'months' | 'category'
   const [budgets, setBudgets] = useState({})        // 'YYYY-M' -> recurring+personal allocation
 
   useEffect(()=>{ window.api.expense.monthTotals().then(setMonths).catch(()=>setMonths([])) }, [])
@@ -43,8 +45,17 @@ export default function MonthlySpending() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-content">Monthly Spending</h2>
-        <p className="text-sm text-muted">Track your spending month by month — click to drill into days</p>
+        <p className="text-sm text-muted">Track your spending month by month, or see it by category</p>
       </div>
+
+      <div className="inline-flex p-1 rounded-xl bg-surface-2 border border-line">
+        {[['months', 'By month'], ['category', 'By category']].map(([k, l]) => (
+          <button key={k} onClick={() => setView(k)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${view === k ? 'bg-brand-600 text-white shadow' : 'text-muted'}`}>{l}</button>
+        ))}
+      </div>
+
+      {view === 'category' ? <CategoryView months={months} /> : <>
 
       <Card>
         <CardContent className="py-5 flex items-center gap-3">
@@ -129,6 +140,7 @@ export default function MonthlySpending() {
           })}
         </div>
       )}
+      </>}
     </div>
   )
 }

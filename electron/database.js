@@ -201,6 +201,7 @@ function migrateSchema() {
   ensureColumn('bills', 'monthly', 'INTEGER DEFAULT 0')
   ensureColumn('bills', 'due_day', 'INTEGER')
   // Selling: cost basis and units already sold (partial sells), and equity vs debt fund (tax).
+  ensureColumn('net_worth_snapshots', 'cash', 'REAL DEFAULT 0')
   ensureColumn('investments', 'sold_cost', 'REAL DEFAULT 0')
   ensureColumn('investments', 'sold_units', 'REAL DEFAULT 0')
   ensureColumn('investments', 'fund_category', "TEXT DEFAULT 'EQUITY'")   // 'EQUITY' | 'DEBT'
@@ -544,6 +545,22 @@ function createTables() {
       FOREIGN KEY (account_id) REFERENCES bank_accounts(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_bank_tx_account ON bank_transactions(account_id, date);
+
+    -- Cash in hand: one wallet, with a statement row for EVERY change (add, spend, move to/from
+    -- a bank account, balance corrections). The balance is the running total of these rows.
+    CREATE TABLE IF NOT EXISTS cash_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,             -- 'CREDIT' | 'DEBIT'
+      amount REAL NOT NULL,           -- always positive
+      balance_after REAL,
+      source TEXT DEFAULT 'MANUAL',   -- MANUAL | OPENING | ADJUSTMENT | TRANSFER
+      ref_type TEXT,
+      ref_id INTEGER,
+      note TEXT,
+      date TEXT NOT NULL,             -- 'YYYY-MM-DD' (local)
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_cash_tx_date ON cash_transactions(date);
 
     -- Realised sales of stocks / fund units. Kept separate from the live portfolio.
     -- snapshot_json holds the holding (and its lots) before the sale so it can be undone.

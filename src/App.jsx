@@ -11,6 +11,7 @@ import Savings from './pages/Savings'
 import Investments from './pages/Investments'
 import EmergencyFund from './pages/EmergencyFund'
 import Bank from './pages/Bank'
+import Cash from './pages/Cash'
 import CreditCards from './pages/CreditCards'
 import Bills from './pages/Bills'
 import RecurringAndBills from './pages/RecurringAndBills'
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="investments" element={<Investments />} />
           <Route path="emergency-fund" element={<EmergencyFund />} />
           <Route path="bank" element={<Bank />} />
+          <Route path="cash" element={<Cash />} />
           <Route path="cards" element={<CreditCards />} />
           <Route path="bills" element={<Bills />} />
           <Route path="recurring" element={<RecurringAndBills />} />

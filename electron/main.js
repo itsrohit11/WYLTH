@@ -96,6 +96,7 @@ app.whenReady().then(() => {
   require('./ipc/analyticsHandlers')()
   require('./ipc/exportHandlers')()
   require('./ipc/bankHandlers')()
+  require('./ipc/cashHandlers')()
   require('./ipc/billHandlers')()
   require('./ipc/authHandlers')()
   require('./ipc/loanHandlers')()

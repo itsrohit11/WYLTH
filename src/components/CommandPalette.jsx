@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Wallet, Receipt, CalendarDays, Repeat, PiggyBank, TrendingUp,
-  Landmark, CreditCard, Shield, Coins, BarChart3, Download, Sun, Moon, Search, CornerDownLeft,
+  Landmark, Banknote, CreditCard, Shield, Coins, BarChart3, Download, Sun, Moon, Search, CornerDownLeft,
 } from 'lucide-react'
 import { useTheme } from '../lib/theme'
 
@@ -15,11 +15,12 @@ const NAV = [
   { label: 'Savings', to: '/savings', icon: PiggyBank },
   { label: 'Investments', to: '/investments', icon: TrendingUp },
   { label: 'Bank Accounts', to: '/bank', icon: Landmark },
+  { label: 'Cash', to: '/cash', icon: Banknote },
   { label: 'Credit Cards', to: '/cards', icon: CreditCard },
   { label: 'Emergency Fund', to: '/emergency-fund', icon: Shield },
   { label: 'Lending & Debts', to: '/loans', icon: Coins },
   { label: 'Analytics', to: '/analytics', icon: BarChart3 },
-  { label: 'Export & Backup', to: '/export', icon: Download },
+  { label: 'Export to Excel', to: '/export', icon: Download },
 ]
 
 export default function CommandPalette() {

@@ -306,7 +306,7 @@ console.log('\nBonds: monthly vs yearly quoted rates')
 
 // --- capital gains (electron/lib/capitalGains.js — the real module, not a copy) -------------
 const cg = require('../electron/lib/capitalGains')
-const { postBankTxn } = require('../electron/lib/ledger')
+const { postBankTxn, postCashTxn, cashBalance } = require('../electron/lib/ledger')
 
 console.log('\nHolding period: long-term only when held MORE than 12 months')
 ;(() => {
@@ -391,6 +391,43 @@ console.log('\nBank statement ledger')
   eq(rows[1].balance_after, 1300, 'each row stores the running balance')
   eq(rows[1].type === 'DEBIT' && rows[1].amount === 200 ? 1 : 0, 1, 'debits stored as positive amount + DEBIT')
   eq(/^\d{4}-\d\d-\d\d$/.test(rows[0].date) ? 1 : 0, 1, 'entry dated in local YYYY-MM-DD')
+})()
+
+console.log('\nTax rules for other assets')
+;(() => {
+  const t = (sales) => cg.fyTax(sales).total
+  eq(t([{ category: 'CRYPTO', st_gain: 1000, lt_gain: 0 }]), 312, 'crypto gain: flat 30% + 4% cess')
+  eq(t([{ category: 'CRYPTO', st_gain: -5000, lt_gain: 0 }, { category: 'CRYPTO', st_gain: 1000, lt_gain: 0 }]), 312, 'crypto losses are not set off')
+  eq(t([{ category: 'EXEMPT', st_gain: 0, lt_gain: 200000 }]), 0, 'PPF / NPS gains add no tax')
+  eq(t([{ category: 'LT24', st_gain: 0, lt_gain: 100000 }]), 13000, 'metals / property held over 24 months: 12.5% + cess, no exemption')
+  eq(t([{ category: 'LT24', st_gain: 10000, lt_gain: 0, slab_rate: 30 }]), 3120, 'metals / property held up to 24 months: slab rate + cess')
+  eq(cg.defaultStt('CRYPTO', 'CRYPTO', 100000), 0, 'no STT on crypto')
+  eq(cg.defaultStt('FD', 'DEBT', 100000), 0, 'no STT on an FD')
+})()
+
+console.log('\nCash in hand')
+;(() => {
+  const db = freshDb()
+  db.exec(`CREATE TABLE cash_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT, amount REAL, balance_after REAL,
+    source TEXT, ref_type TEXT, ref_id INTEGER, note TEXT, date TEXT, created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE bank_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER, type TEXT, amount REAL, balance_after REAL,
+    source TEXT, ref_type TEXT, ref_id INTEGER, note TEXT, date TEXT, created_at TEXT DEFAULT (datetime('now')));`)
+  db.exec('ALTER TABLE bank_accounts ADD COLUMN updated_at TEXT')
+  db.prepare('INSERT INTO bank_accounts (id,purpose,balance) VALUES (1,?,?)').run('SAVINGS', 10000)
+  eq(cashBalance(db), 0, 'cash starts at zero')
+  postCashTxn(db, 500, { note: 'gift' })
+  postCashTxn(db, -120.5, { note: 'auto' })
+  postCashTxn(db, 0, { note: 'ignored' })
+  eq(cashBalance(db), 379.5, 'balance is the running total')
+  const rows = db.prepare('SELECT * FROM cash_transactions ORDER BY id').all()
+  eq(rows.length, 2, 'zero amounts post nothing')
+  eq(rows[1].balance_after, 379.5, 'each row stores the running balance')
+  // ATM withdrawal: bank down, cash up, same amount
+  const total = () => balanceOf(db, 1) + cashBalance(db)
+  const before = total()
+  postBankTxn(db, 1, -2000, { source: 'TRANSFER' }); postCashTxn(db, 2000, { source: 'TRANSFER' })
+  eq(total(), before, 'moving money between bank and cash leaves the total unchanged')
 })()
 
 console.log(`\n${passed} passed, ${failed} failed\n`)

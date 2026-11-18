@@ -4,7 +4,8 @@ const { postBankTxn, localToday } = require('../lib/ledger')
 const cg = require('../lib/capitalGains')
 const { recomputeStock, ensureBaseLot } = require('./investmentHandlers')
 
-// Selling stocks and SIP / mutual-fund units.
+// Selling any holding: stocks, SIP / mutual-fund units, crypto, metals, and lump-sum holdings
+// (FD, bonds, PPF, NPS, real estate, other).
 //
 //   sale:preview  -> works out the sale (FIFO lots, short/long-term split, charges, tax) WITHOUT
 //                    changing anything, so the Sell popup can show the numbers live.
@@ -12,6 +13,7 @@ const { recomputeStock, ensureBaseLot } = require('./investmentHandlers')
 //                    and credits the net proceeds to the chosen bank account (statement entry).
 //   sale:undo     -> puts everything back exactly (latest sale of a holding only).
 
+const RULES_LT24 = cg.RULES.OTHER_LT_MONTHS
 const ymOf = (d) => String(d || '').slice(0, 7)
 function monthsInclusive(startYM, endYM) {
   const [sy, sm] = String(startYM).split('-').map(Number)
@@ -33,18 +35,36 @@ function planSale(db, p) {
   if (!inv) throw new Error('Investment not found')
   if (inv.status === 'CLOSED') throw new Error('This holding is already fully sold')
   const kind = inv.type
-  if (kind !== 'STOCKS' && kind !== 'SIP') throw new Error('Selling is available for Stocks and SIP / mutual funds')
+  const mode = kind === 'STOCKS' ? 'LOTS' : kind === 'SIP' ? 'FUND' : (kind === 'CRYPTO' || kind === 'METALS') ? 'UNIT' : 'LUMP'
 
   const sellDate = String(p.date || localToday()).slice(0, 10)
-  const units = Number(p.units) || 0
-  const price = Number(p.price) || 0
-  if (!(units > 0)) throw new Error('Enter how many units you are selling')
-  if (!(price > 0)) throw new Error(kind === 'STOCKS' ? 'Enter the sell price per share' : 'Enter the NAV you redeemed at')
-  const category = kind === 'STOCKS' ? 'EQUITY' : (p.category === 'DEBT' ? 'DEBT' : 'EQUITY')
-  const slabRate = category === 'DEBT' ? (p.slab_rate === '' || p.slab_rate == null ? 30 : Number(p.slab_rate) || 0) : null
+  let units = Number(p.units) || 0
+  let price = Number(p.price) || 0
+  if (mode === 'LUMP') {
+    // A lump-sum holding is sold by share of the holding (100 = all of it) for the amount received.
+    const amount = Number(p.amount) || 0
+    if (!(units > 0)) throw new Error('Enter how much of the holding you are closing (100% = all of it)')
+    if (units > 100 + 1e-9) throw new Error('You cannot close more than 100% of the holding')
+    if (!(amount > 0)) throw new Error('Enter the amount you received')
+    price = amount / units
+  } else {
+    if (!(units > 0)) throw new Error(kind === 'STOCKS' ? 'Enter how many shares you are selling' : 'Enter the quantity you are selling')
+    if (!(price > 0)) throw new Error(kind === 'SIP' ? 'Enter the NAV you redeemed at' : 'Enter the sell price per unit')
+  }
+  // Tax treatment by asset class
+  let category
+  if (kind === 'STOCKS') category = 'EQUITY'
+  else if (kind === 'SIP') category = p.category === 'DEBT' ? 'DEBT' : 'EQUITY'
+  else if (kind === 'CRYPTO') category = 'CRYPTO'
+  else if (kind === 'METALS' || kind === 'REAL_ESTATE') category = 'LT24'
+  else if (kind === 'PPF' || kind === 'NPS') category = 'EXEMPT'
+  else category = 'DEBT'                       // FD, bonds, other: gain taxed at slab
+  const needsSlab = category === 'DEBT' || category === 'LT24'
+  const slabRate = needsSlab ? (p.slab_rate === '' || p.slab_rate == null ? 30 : Number(p.slab_rate) || 0) : null
+  const ltMonths = category === 'LT24' ? RULES_LT24 : category === 'CRYPTO' ? 1200 : cg.RULES.EQUITY_LT_MONTHS
 
   let held, chunks, lotUpdates = null, avgCost
-  if (kind === 'STOCKS') {
+  if (mode === 'LOTS') {
     let lots = db.prepare('SELECT id, units, price, date FROM stock_purchases WHERE investment_id=?').all(inv.id)
     // Legacy holding with no lots: treat the whole position as one lot bought on its date.
     if (lots.length === 0 && inv.units > 0) {
@@ -55,6 +75,17 @@ function planSale(db, p) {
     const r = cg.consumeStockLots(lots, units)
     chunks = r.chunks; lotUpdates = r.updates
     avgCost = held > 0 ? lots.reduce((s, l) => s + l.units * l.price, 0) / held : 0
+  } else if (mode === 'UNIT') {
+    held = Number(inv.units) || 0
+    if (!(held > 0)) throw new Error('This holding has no quantity recorded - edit it and add the quantity first')
+    if (units > held + 1e-9) throw new Error(`You only hold ${+held.toFixed(4)} ${kind === 'METALS' ? 'g' : 'units'}`)
+    avgCost = (Number(inv.invested_amount) || 0) / held
+    chunks = [{ date: inv.date, units, cost: avgCost * units }]
+  } else if (mode === 'LUMP') {
+    held = 100
+    const invested = Number(inv.invested_amount) || 0
+    avgCost = invested / 100
+    chunks = [{ date: inv.date, units, cost: invested * units / 100 }]
   } else {
     held = Number(inv.units) || 0
     if (!(held > 0) && Number(p.held_units) > 0) held = Number(p.held_units)
@@ -78,20 +109,20 @@ function planSale(db, p) {
 
   const gross = units * price
   const stt = p.stt === '' || p.stt == null ? cg.defaultStt(kind, category, gross) : Number(p.stt) || 0
-  const g = cg.saleGains({ chunks, price, brokerage: Number(p.brokerage) || 0, stt, sellDate })
+  const g = cg.saleGains({ chunks, price, brokerage: Number(p.brokerage) || 0, stt, sellDate, ltMonths })
   const fy = cg.fyOf(sellDate)
   const tax = cg.marginalTax(salesInFy(db, fy), { category, st_gain: g.stGain, lt_gain: g.ltGain, slab_rate: slabRate })
 
   return {
-    inv, kind, category, slabRate, sellDate, units, price, held,
+    inv, kind, mode, category, slabRate, sellDate, units, price, held,
     remainingUnits: Math.max(0, held - units), avgCost: cg.round2(avgCost),
-    g, fy, tax, lotUpdates, isEstimate: kind === 'SIP',
+    g, fy, tax, lotUpdates, isEstimate: kind === 'SIP' || mode === 'LUMP',
   }
 }
 
 // What the renderer needs from a plan (no DB rows it shouldn't edit).
 const publicPlan = (pl) => ({
-  ok: true, kind: pl.kind, category: pl.category, slabRate: pl.slabRate, sellDate: pl.sellDate,
+  ok: true, kind: pl.kind, mode: pl.mode, category: pl.category, slabRate: pl.slabRate, sellDate: pl.sellDate,
   units: pl.units, price: pl.price, held: pl.held, remainingUnits: pl.remainingUnits, avgCost: pl.avgCost,
   fullySold: pl.remainingUnits <= 1e-9, isEstimate: pl.isEstimate, fy: pl.fy,
   ...pl.g, taxAdded: pl.tax.added, fyBefore: pl.tax.before, fyAfter: pl.tax.after, rules: cg.RULES,
@@ -120,13 +151,17 @@ module.exports = function registerSaleHandlers() {
         const inv = pl.inv
         const snapshot = {
           investment: inv,
-          lots: pl.kind === 'STOCKS' ? db.prepare('SELECT * FROM stock_purchases WHERE investment_id=?').all(inv.id) : null,
+          lots: pl.mode === 'LOTS' ? db.prepare('SELECT * FROM stock_purchases WHERE investment_id=?').all(inv.id) : null,
         }
         const soldCost = (Number(inv.sold_cost) || 0) + pl.g.costBasis
         const soldUnits = (Number(inv.sold_units) || 0) + pl.units
         const fully = pl.remainingUnits <= 1e-9
 
-        if (pl.kind === 'STOCKS') {
+        const closeHolding = () => db.prepare(`UPDATE investments SET units=${pl.mode === 'LUMP' ? 'units' : '0'}, invested_amount=0, current_value=0, status='CLOSED',
+          sold_cost=?, sold_units=?, fund_category=?, updated_at=datetime('now') WHERE id=?`)
+          .run(soldCost, soldUnits, pl.kind === 'SIP' ? pl.category : (inv.fund_category || null), inv.id)
+
+        if (pl.mode === 'LOTS') {
           for (const u of pl.lotUpdates) {
             if (u.units_left <= 1e-9) db.prepare('DELETE FROM stock_purchases WHERE id=?').run(u.id)
             else db.prepare('UPDATE stock_purchases SET units=? WHERE id=?').run(u.units_left, u.id)
@@ -135,21 +170,24 @@ module.exports = function registerSaleHandlers() {
             db.prepare(`UPDATE investments SET units=0, invested_amount=0, current_value=0, status='CLOSED',
               sold_cost=?, sold_units=?, updated_at=datetime('now') WHERE id=?`).run(soldCost, soldUnits, inv.id)
           } else {
-            // The sell price is the latest market price you saw — value what's left at it.
+            // The sell price is the latest market price you saw - value what's left at it.
             db.prepare(`UPDATE investments SET current_price=?, sold_cost=?, sold_units=?, updated_at=datetime('now') WHERE id=?`)
               .run(pl.price, soldCost, soldUnits, inv.id)
             recomputeStock(db, inv.id)
           }
         } else if (fully) {
-          db.prepare(`UPDATE investments SET units=0, invested_amount=0, current_value=0, status='CLOSED',
-            sold_cost=?, sold_units=?, fund_category=?, updated_at=datetime('now') WHERE id=?`)
-            .run(soldCost, soldUnits, pl.category, inv.id)
+          closeHolding()
+        } else if (pl.mode === 'LUMP') {
+          const keep = 1 - pl.units / 100
+          const cv = Number(inv.current_value) || Number(inv.invested_amount) || 0
+          db.prepare(`UPDATE investments SET invested_amount=?, current_value=?, sold_cost=?, sold_units=?, updated_at=datetime('now') WHERE id=?`)
+            .run((Number(inv.invested_amount) || 0) * keep, cv * keep, soldCost, soldUnits, inv.id)
         } else {
           const left = pl.remainingUnits
           db.prepare(`UPDATE investments SET units=?, current_price=?, current_value=?, invested_amount=?,
             sold_cost=?, sold_units=?, fund_category=?, last_traded_date=?, updated_at=datetime('now') WHERE id=?`)
             .run(left, pl.price, left * pl.price, Math.max(0, (Number(inv.invested_amount) || 0) - pl.g.costBasis),
-              soldCost, soldUnits, pl.category, pl.sellDate, inv.id)
+              soldCost, soldUnits, pl.kind === 'SIP' ? pl.category : (inv.fund_category || null), pl.sellDate, inv.id)
         }
 
         const r = db.prepare(`
@@ -172,7 +210,7 @@ module.exports = function registerSaleHandlers() {
         if (p.account_id) {
           const txId = postBankTxn(db, Number(p.account_id), pl.g.netProceeds, {
             source: 'INVESTMENT_SALE', refType: 'sale', refId: saleId, date: pl.sellDate,
-            note: `Sold ${+pl.units.toFixed(4)} ${pl.kind === 'STOCKS' ? 'sh' : 'units'} of ${inv.title} @ ₹${pl.price}`,
+            note: pl.mode === 'LUMP' ? `Closed ${+pl.units.toFixed(2)}% of ${inv.title}` : `Sold ${+pl.units.toFixed(4)} ${pl.kind === 'STOCKS' ? 'sh' : pl.kind === 'METALS' ? 'g' : 'units'} of ${inv.title} @ ₹${+pl.price.toFixed(4)}`,
           })
           db.prepare('UPDATE investment_sales SET bank_txn_id=? WHERE id=?').run(txId, saleId)
         }

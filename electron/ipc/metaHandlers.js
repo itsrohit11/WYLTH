@@ -15,6 +15,7 @@ const SECTIONS = {
                   ['sip_nav', ['created_at']], ['investment_sales', ['updated_at', 'created_at']]],
   emergency:     [['emergency_fund', ['updated_at', 'created_at']]],
   bank:          [['bank_accounts', ['updated_at', 'created_at']], ['bank_transactions', ['created_at']]],
+  cash:          [['cash_transactions', ['created_at']]],
   loans:         [['loans', ['updated_at', 'created_at']]],
   notes:         [['notes', ['updated_at', 'created_at']]],
 }

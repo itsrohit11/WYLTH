@@ -16,14 +16,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM --- First run only: install dependencies ---
+REM --- Install / update dependencies (quick when nothing changed).
 REM postinstall ^(scripts\setup-native.js^) fetches the matching better-sqlite3
 REM binary for Electron, so no C++ build tools are needed.
-if not exist "node_modules" (
-  echo Installing dependencies ^(this can take a few minutes^)...
-  call npm install
-  if errorlevel 1 ( echo. & echo ERROR: npm install failed. Scroll up for details. & pause & exit /b 1 )
-)
+echo Checking dependencies ^(first run or new packages can take a few minutes^)...
+call npm install
+if errorlevel 1 ( echo. & echo ERROR: npm install failed. Scroll up for details. & pause & exit /b 1 )
 
 echo.
 echo Building React app...

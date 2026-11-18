@@ -91,7 +91,8 @@ contextBridge.exposeInMainWorld('api', {
   },
   // Export
   export: {
-    excel: () => ipcRenderer.invoke('export:excel'),
+    excel: (opts) => ipcRenderer.invoke('export:excel', opts),
+    months: () => ipcRenderer.invoke('export:months'),
     getDbPath: () => ipcRenderer.invoke('export:getDbPath'),
     openDbFolder: () => ipcRenderer.invoke('export:openDbFolder'),
   },
@@ -121,6 +122,14 @@ contextBridge.exposeInMainWorld('api', {
     insights: (cardId) => ipcRenderer.invoke('card:insights', cardId),
   },
   // Bank accounts
+  // Cash in hand
+  cash: {
+    get: () => ipcRenderer.invoke('cash:get'),
+    adjust: (data) => ipcRenderer.invoke('cash:adjust', data),
+    setBalance: (data) => ipcRenderer.invoke('cash:setBalance', data),
+    transfer: (data) => ipcRenderer.invoke('cash:transfer', data),
+    statement: (ym) => ipcRenderer.invoke('cash:statement', { ym }),
+  },
   bank: {
     getAll: () => ipcRenderer.invoke('bank:getAll'),
     create: (data) => ipcRenderer.invoke('bank:create', data),

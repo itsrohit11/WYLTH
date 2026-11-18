@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Wallet, Receipt, CalendarDays, Repeat, PiggyBank, TrendingUp, Shield, Landmark, CreditCard, Coins, BarChart3, Download, IndianRupee, StickyNote } from 'lucide-react'
+import { LayoutDashboard, Wallet, Receipt, CalendarDays, Repeat, PiggyBank, TrendingUp, Shield, Landmark, Banknote, CreditCard, Coins, BarChart3, Download, IndianRupee, StickyNote } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 // Grouped, workflow-based order (income -> spending -> wealth -> tools).
@@ -18,6 +18,7 @@ const groups = [
     { to:'/savings',        icon: PiggyBank,  label:'Savings' },
     { to:'/investments',    icon: TrendingUp, label:'Investments' },
     { to:'/bank',           icon: Landmark,   label:'Bank Accounts' },
+    { to:'/cash',           icon: Banknote,   label:'Cash' },
     { to:'/emergency-fund', icon: Shield,     label:'Emergency Fund' },
   ]},
   { label: 'More', items: [

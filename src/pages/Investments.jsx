@@ -492,7 +492,7 @@ export default function Investments() {
                       <td className="px-4 py-3" onClick={e=>e.stopPropagation()}>
                         <div className="flex gap-1">
                           {inv.type==='SIP' && <Button size="sm" variant="outline" onClick={()=>setNavModal({open:true,inv})} title="Update NAV & units">NAV</Button>}
-                          {(inv.type==='STOCKS' || inv.type==='SIP') && <Button size="sm" variant="outline" onClick={()=>setSellInv(inv)} title={inv.type==='STOCKS'?'Sell shares':'Redeem units'}><BadgeIndianRupee size={13}/> Sell</Button>}
+                          <Button size="sm" variant="outline" onClick={()=>setSellInv(inv)} title={inv.type==='SIP'?'Redeem units':['FD','PPF','NPS'].includes(inv.type)?'Close or withdraw':'Sell'}><BadgeIndianRupee size={13}/> Sell</Button>
                           <Button size="icon" variant="ghost" onClick={()=>setModal({open:true,item:inv})}><Pencil size={14} className="text-muted"/></Button>
                           <Button size="icon" variant="ghost" onClick={()=>del(inv.id)}><Trash2 size={14} className="text-red-400"/></Button>
                         </div>
@@ -567,7 +567,10 @@ export default function Investments() {
         </CardContent>
       </Card>
 
-      <SoldSection refreshKey={soldTick} onChanged={()=>fetchAll()}/>
+      {/* Sold holdings live only inside their own type tab - nothing is mixed across types. */}
+      {typeFilter==='ALL'
+        ? <p className="text-xs text-faint text-center">Sold holdings appear under their own tab, for example sold stocks under Stocks. Pick a type above to see them.</p>
+        : <SoldSection key={typeFilter} type={typeFilter} refreshKey={soldTick} onChanged={()=>fetchAll()}/>}
 
       {sellInv && <SellModal inv={sellInv} onClose={()=>setSellInv(null)} onDone={()=>{ fetchAll(); setSoldTick(t=>t+1) }}/>}
 
